@@ -27,24 +27,32 @@ for i in range (0, len(data)-seq_length-1, 1):
 X_modified = np.reshape(X, (len(X), seq_length))
 y_modified = np.reshape(y, (len(y), seq_length))
 
-X0_weight = np.random.randn(hidden_size, vocab_size)*0.01
+X0_weight = np.random.randn(vocab_size, hidden_size)*0.01
 X1_weight = np.random.randn(hidden_size, hidden_size)*0.01
 X2_weight = np.random.randn(vocab_size, hidden_size)*0.01
 
 tf.reset_default_graph()
-# model parameters
-X0 = tf.placeholder(tf.float32, [None, seq_length]) # input to hidden
-# X1 = tf.placeholder(tf.float32, [None, seq_length]) # hidden to hidden
-y = tf.placeholder(tf.float32, [None, seq_length])
-rnn_cell = tf.nn.rnn_cell.BasicRNNCell(num_units=hidden_size)
-outputs, states = tf.nn.dynamic_rnn(rnn_cell, X0, dtype=tf.float32)
 
-# Wx0 = tf.Variable(tf.random_normal(shape=[seq_length, hidden_size],dtype=tf.float32))
-# Wx1 = tf.Variable(tf.random_normal(shape=[hidden_size, hidden_size],dtype=tf.float32))
-# Wy = tf.Variable(tf.random_normal(shape=[hidden_size, seq_length],dtype=tf.float32))
-# hidden_bias = tf.Variable(tf.zeros([1, hidden_size], dtype=tf.float32))
-# output_bias = tf.Variable(tf.zeros([1, vocab_size], dtype=tf.float32))
-init = tf.gloabal_varaibles_initializer()
+# model parameters
+X0 = tf.placeholder(tf.float32, [None, seq_length, vocab_size]) # input to hidden
+y = tf.placeholder(tf.float32, [None, vocab_size])
+
+def RNN(x, weights):    
+    cell = tf.contrib.rnn.OutputProjectionWrapper(
+            tf.nn.rnn_cell.BasicRNNCell(num_units=hidden_size, activation = tf.nn.leaky_relu),
+            output_size=vocab_size)
+    outputs, states = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+    return tf.matmul(outputs[-1], weights)
+
+
+logits = RNN(X_modified, X0)
+prediction = tf.nn.softmax(logits)
+loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y_modified))
+optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
+train_op = optimizer.minimize(loss_op)
+
+init = tf.global_varaibles_initializer()
+
 with tf.Session() as sess:
     init.run()
     outputs_val = outputs.eval(feed_dict={X: X_modified})
