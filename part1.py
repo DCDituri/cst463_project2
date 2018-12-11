@@ -17,6 +17,9 @@ ix_to_char = { i:ch for i,ch in enumerate(chars) }
 hidden_size = 100 # size of hidden layer of neurons
 seq_length = 25 # number of steps to unroll the RNN for
 learning_rate = 1e-1
+n_epoch = 10
+y_num_example = X_data.shape[0]
+batch_size = 200
 
 # preprocessing
 X = []
@@ -44,6 +47,19 @@ def RNN(x, weights):
     outputs, states = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
     return tf.matmul(outputs[-1], weights)
 
+def fetch_batch(ix,iteration):
+    np.random.seed(ix+iteration) 
+    indices = np.random.randint(X_data.shape[1], size=iteration)
+    X_batch = list()
+    y_batch = list()
+    for i in indices:
+        X_batch.append(X_data[i])
+        y_batch.append(y_data[i])
+
+    X_batch, y_batch = np.asanyarray(X_batch), np.asanyarray(y_batch)
+    X_batch = X_batch.reshape(-1,n_steps, n_inputs)
+    y_batch = y_batch.reshape(-1,n_steps, n_inputs)
+    return X_batch, y_batch
 
 logits = RNN(X_modified, X0)
 prediction = tf.nn.softmax(logits)
@@ -55,5 +71,10 @@ init = tf.global_varaibles_initializer()
 
 with tf.Session() as sess:
     init.run()
-    outputs_val = outputs.eval(feed_dict={X: X_modified})
-    
+    for epoch in range(n_epochs):
+        for iteration in tqdm(range(y_num_example // batch_size)):
+            X_batch ,y_batch = fetch_batch(iteration,batch_size)
+            sess.run(train_op, feed_dict={X: X_batch, y: y_batch})
+        if epoch % 1 == 0:
+            mse = loss.eval(feed_dict={X: X_batch, y: y_batch})
+            print(epoch, "\tMSE:", mse)
