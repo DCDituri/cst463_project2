@@ -34,20 +34,17 @@ X2_weight = np.random.randn(vocab_size, hidden_size)*0.01
 tf.reset_default_graph()
 
 # model parameters
-X0 = tf.placeholder(tf.float32, [None, seq_length, vocab_size]) # input to hidden
+X0 = tf.placeholder(tf.float32, [None, seq_length]) # input to hidden
 y = tf.placeholder(tf.float32, [None, vocab_size])
 
-def RNN(x, weights):    
-    cell = tf.contrib.rnn.OutputProjectionWrapper(
-            tf.nn.rnn_cell.BasicRNNCell(num_units=hidden_size, activation = tf.nn.leaky_relu),
-            output_size=vocab_size)
-    outputs, states = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
-    return tf.matmul(outputs[-1], weights)
+X_onehot = tf.one_hot(X_modified, vocab_size)
+cell = tf.contrib.rnn.OutputProjectionWrapper(
+        tf.nn.rnn_cell.BasicRNNCell(num_units=hidden_size, activation=tf.nn.leaky_relu),
+        output_size=vocab_size)
+outputs, states = tf.nn.dynamic_rnn(cell, X_onehot, dtype=tf.float32)
 
-
-logits = RNN(X_modified, X0)
-prediction = tf.nn.softmax(logits)
-loss_op = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=y_modified))
+prediction = tf.nn.softmax(outputs)
+loss_op = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=outputs, labels=y_modified))
 optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
 train_op = optimizer.minimize(loss_op)
 
@@ -57,3 +54,4 @@ with tf.Session() as sess:
     init.run()
     outputs_val = outputs.eval(feed_dict={X: X_modified})
     
+"""
