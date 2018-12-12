@@ -38,6 +38,7 @@ X0 = tf.placeholder(tf.float32, [None, seq_length]) # input to hidden
 y = tf.placeholder(tf.float32, [None, vocab_size])
 
 X_onehot = tf.one_hot(X_modified, vocab_size)
+y_onehot = tf.one_hot(y_modified, vocab_size)
 cell = tf.contrib.rnn.OutputProjectionWrapper(
         tf.nn.rnn_cell.BasicRNNCell(num_units=hidden_size, activation=tf.nn.leaky_relu),
         output_size=vocab_size)
@@ -62,15 +63,29 @@ def mini_batches(X, y, batchsize, shuffle=False):
            batch_indexes = slice(start,start + batchsize)
        yield X[batch_indexes], y[batch_indexes]
 
+def fetch_batch(ix,iteration):
+   np.random.seed(ix+iteration)
+   indices = np.random.randint(X_modified.shape[1], size=iteration)
+   X_batch = list()
+   y_batch = list()
+   for i in indices:
+       X_batch.append(X_modified[i])
+       y_batch.append(y_modified[i])
+
+   X_batch, y_batch = np.asanyarray(X_batch), np.asanyarray(y_batch)
+   X_batch = X_batch.reshape(-1,seq_length, vocab_size)
+   y_batch = y_batch.reshape(-1,seq_length, vocab_size)
+   return X_batch, y_batch
+
 n_epochs = 10
-batch_size = 200
+batch_size = 25
 
 with tf.Session() as sess:
     init.run()
     for epoch in range(n_epochs):
-        X_batch, y_batch = mini_batches(X_modified, y_modified, batch_size)
-        sess.run(train_op, feed_dict={X: X_batch, y: y_batch})
+        X_batch, y_batch = fetch_batch(epoch, batch_size)
+        sess.run(train_op, feed_dict={X: X_batch[epoch], y: y_batch[epoch]})
         
     if epoch % 1 == 0:
-        print(prediction)
+        print(prediction[0])
       
