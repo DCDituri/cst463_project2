@@ -13,6 +13,8 @@ data_size, vocab_size = len(data), len(chars)
 char_to_ix = { ch:i for i,ch in enumerate(chars) }
 ix_to_char = { i:ch for i,ch in enumerate(chars) }
 
+tf.reset_default_graph()
+
 # hyperparameters
 hidden_size = 100 # size of hidden layer of neurons
 seq_length = 25 # number of steps to unroll the RNN for
@@ -31,8 +33,6 @@ X0_weight = np.random.randn(vocab_size, hidden_size)*0.01
 X1_weight = np.random.randn(hidden_size, hidden_size)*0.01
 X2_weight = np.random.randn(vocab_size, hidden_size)*0.01
 
-tf.reset_default_graph()
-
 # model parameters
 X0 = tf.placeholder(tf.float32, [None, seq_length]) # input to hidden
 y = tf.placeholder(tf.float32, [None, vocab_size])
@@ -48,10 +48,29 @@ loss_op = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=o
 optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
 train_op = optimizer.minimize(loss_op)
 
-init = tf.global_varaibles_initializer()
+init = tf.global_variables_initializer()
+
+def mini_batches(X, y, batchsize, shuffle=False):
+   assert X.shape[0] == y.shape[0]
+   if shuffle:
+       indices = np.arange(X.shape[0])
+       np.random.shuffle(indices)
+   for start in range(0, X.shape[0] - batchsize + 1, batchsize):
+       if shuffle:
+           batch_indexes = indices[start:start + batchsize]
+       else:
+           batch_indexes = slice(start,start + batchsize)
+       yield X[batch_indexes], y[batch_indexes]
+
+n_epochs = 10
+batch_size = 200
 
 with tf.Session() as sess:
     init.run()
-    outputs_val = outputs.eval(feed_dict={X: X_modified})
-    
-"""
+    for epoch in range(n_epochs):
+        X_batch, y_batch = mini_batches(X_modified, y_modified, batch_size)
+        sess.run(train_op, feed_dict={X: X_batch, y: y_batch})
+        
+    if epoch % 1 == 0:
+        print(prediction)
+      
