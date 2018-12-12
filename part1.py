@@ -51,34 +51,23 @@ train_op = optimizer.minimize(loss_op)
 
 init = tf.global_variables_initializer()
 
-def mini_batches(X, y, batchsize, shuffle=False):
-   assert X.shape[0] == y.shape[0]
-   if shuffle:
-       indices = np.arange(X.shape[0])
-       np.random.shuffle(indices)
-   for start in range(0, X.shape[0] - batchsize + 1, batchsize):
-       if shuffle:
-           batch_indexes = indices[start:start + batchsize]
-       else:
-           batch_indexes = slice(start,start + batchsize)
-       yield X[batch_indexes], y[batch_indexes]
-
 def fetch_batch(ix,iteration):
    np.random.seed(ix+iteration)
-   indices = np.random.randint(X_modified.shape[1], size=iteration)
+   indices = np.random.randint(X_onehot.shape[1], size=iteration)
    X_batch = list()
    y_batch = list()
    for i in indices:
-       X_batch.append(X_modified[i])
-       y_batch.append(y_modified[i])
+       X_batch.append(X_onehot[i])
+       y_batch.append(y_onehot[i])
 
    X_batch, y_batch = np.asanyarray(X_batch), np.asanyarray(y_batch)
+   print(X_batch)
    X_batch = X_batch.reshape(-1,seq_length, vocab_size)
    y_batch = y_batch.reshape(-1,seq_length, vocab_size)
    return X_batch, y_batch
 
 n_epochs = 10
-batch_size = 25
+batch_size = 200
 
 with tf.Session() as sess:
     init.run()
